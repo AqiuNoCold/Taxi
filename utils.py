@@ -1,3 +1,4 @@
+import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -17,10 +18,14 @@ def haversine(lon1, lat1, lon2, lat2):
 
 def preprocess_copy(df):
     df_new = df.copy()
+    
+    # 时间处理
     df_new["pickup_datetime"] = pd.to_datetime(df["pickup_datetime"])
     df_new["dropoff_datetime"] = pd.to_datetime(df["dropoff_datetime"], errors='coerce')
     df_new["trip_duration"] = df["trip_duration"]
     df_new["pickup_hour"] = df_new["pickup_datetime"].dt.hour
+
+    # 计算行程距离 km
     df_new["distance_km"] = haversine(
         df["pickup_longitude"], df["pickup_latitude"],
         df["dropoff_longitude"], df["dropoff_latitude"]
@@ -28,21 +33,41 @@ def preprocess_copy(df):
 
     # 速度 km/h
     df_new["speed_kmh"] = df_new["distance_km"] / (df_new["trip_duration"] / 3600)
-    # 去除异常速度
-    df_new.loc[df_new["speed_kmh"] > 200, "speed_kmh"] = np.nan
+    df_new.loc[df_new["speed_kmh"] > 200, "speed_kmh"] = np.nan  # 异常速度设为 NaN
+    # 经纬度范围过滤
+    lon_min, lon_max = -74.3, -73.7
+    lat_min, lat_max = 40.5, 41.0
+
+    df_new.loc[
+        (df_new["pickup_longitude"] < lon_min) | (df_new["pickup_longitude"] > lon_max) |
+        (df_new["pickup_latitude"] < lat_min) | (df_new["pickup_latitude"] > lat_max),
+        ["pickup_longitude", "pickup_latitude"]
+    ] = np.nan
+
+    df_new.loc[
+        (df_new["dropoff_longitude"] < lon_min) | (df_new["dropoff_longitude"] > lon_max) |
+        (df_new["dropoff_latitude"] < lat_min) | (df_new["dropoff_latitude"] > lat_max),
+        ["dropoff_longitude", "dropoff_latitude"]
+    ] = np.nan
+
+    # 去除 distance_km 为 0 或负值的异常
+    df_new.loc[df_new["distance_km"] <= 0, "distance_km"] = np.nan
 
     return df_new
 
+
+sns.set_theme(style="whitegrid")  # 设置 Seaborn 主题
 
 def plot_duration(df, max_min=3600):
     duration = df["trip_duration"]
     duration = duration[duration < max_min]
 
     plt.figure(figsize=(8,4))
-    plt.hist(duration, bins=50)
-    plt.title("Trip Duration Distribution")
-    plt.xlabel("Seconds")
-    plt.ylabel("Count")
+    sns.histplot(duration, bins=50, kde=False, color="skyblue")
+    plt.title("Trip Duration Distribution", fontsize=14)
+    plt.xlabel("Seconds", fontsize=12)
+    plt.ylabel("Count", fontsize=12)
+    plt.savefig("./imgs/duration_distribution.png", dpi=300)
     plt.show()
 
 def plot_distance(df, max_km=30):
@@ -50,10 +75,11 @@ def plot_distance(df, max_km=30):
     dist = dist[dist < max_km]
 
     plt.figure(figsize=(8,4))
-    plt.hist(dist, bins=50)
-    plt.title("Trip Distance Distribution")
-    plt.xlabel("Distance (km)")
-    plt.ylabel("Count")
+    sns.histplot(dist, bins=50, kde=False, color="salmon")
+    plt.title("Trip Distance Distribution", fontsize=14)
+    plt.xlabel("Distance (km)", fontsize=12)
+    plt.ylabel("Count", fontsize=12)
+    plt.savefig("./imgs/distance_distribution.png", dpi=300)
     plt.show()
 
 def plot_speed(df, max_speed=120):
@@ -61,41 +87,51 @@ def plot_speed(df, max_speed=120):
     speed = speed[speed < max_speed]
 
     plt.figure(figsize=(8,4))
-    plt.hist(speed, bins=50)
-    plt.title("Speed Distribution")
-    plt.xlabel("Speed (km/h)")
-    plt.ylabel("Count")
+    sns.histplot(speed, bins=50, kde=False, color="lightgreen")
+    plt.title("Speed Distribution", fontsize=14)
+    plt.xlabel("Speed (km/h)", fontsize=12)
+    plt.ylabel("Count", fontsize=12)
+    plt.savefig("./imgs/speed_distribution.png", dpi=300)
     plt.show()
 
 def plot_pickup_hour(df):
     hours = df["pickup_hour"]
 
     plt.figure(figsize=(8,4))
-    plt.hist(hours, bins=24, range=(0,24))
-    plt.title("Pickup Hour Distribution")
-    plt.xlabel("Hour")
-    plt.ylabel("Count")
-    plt.xticks(range(24))
+    sns.histplot(hours, bins=24, binrange=(0,24), kde=False, color="mediumpurple")
+    plt.title("Pickup Hour Distribution", fontsize=14)
+    plt.xlabel("Hour", fontsize=12)
+    plt.ylabel("Count", fontsize=12)
+    plt.xticks(range(0,24))
+    plt.savefig("./imgs/pickup_hour_distribution.png", dpi=300)
     plt.show()
 
 def plot_pickup_location(df, n=50000):
     sample = df.sample(min(n, len(df)))
 
     plt.figure(figsize=(6,6))
-    plt.scatter(sample["pickup_longitude"], sample["pickup_latitude"], s=1, alpha=0.3)
-    plt.title("Pickup Locations")
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
+    sns.scatterplot(
+        x="pickup_longitude", y="pickup_latitude", 
+        data=sample, s=10, alpha=0.3, color="dodgerblue"
+    )
+    plt.title("Pickup Locations", fontsize=14)
+    plt.xlabel("Longitude", fontsize=12)
+    plt.ylabel("Latitude", fontsize=12)
+    plt.savefig("./imgs/pickup_locations.png", dpi=300)
     plt.show()
 
 def plot_dropoff_location(df, n=50000):
     sample = df.sample(min(n, len(df)))
 
     plt.figure(figsize=(6,6))
-    plt.scatter(sample["dropoff_longitude"], sample["dropoff_latitude"], s=1, alpha=0.3)
-    plt.title("Dropoff Locations")
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
+    sns.scatterplot(
+        x="dropoff_longitude", y="dropoff_latitude", 
+        data=sample, s=10, alpha=0.3, color="tomato"
+    )
+    plt.title("Dropoff Locations", fontsize=14)
+    plt.xlabel("Longitude", fontsize=12)
+    plt.ylabel("Latitude", fontsize=12)
+    plt.savefig("./imgs/dropoff_locations.png", dpi=300)
     plt.show()
 
 
@@ -104,8 +140,8 @@ def visualize_all(df):
     plot_distance(df)
     plot_speed(df)
     plot_pickup_hour(df)
-    # plot_pickup_location(df)
-    # plot_dropoff_location(df)
+    plot_pickup_location(df)
+    plot_dropoff_location(df)
 
 def feature_importance(df):
     # 处理后数据
