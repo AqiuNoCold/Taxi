@@ -138,28 +138,6 @@ def plot_dropoff_location(df, n=50000):
     plt.savefig("./imgs/dropoff_locations.png", dpi=300)
     plt.show()
 
-def plot_month(df):
-    month = df["month"]
-    plt.figure(figsize=(8,4))
-    sns.histplot(month, bins=12, binrange=(0.5,12.5), discrete=True, kde=False, color="gold")
-    plt.title("Month Distribution", fontsize=14)
-    plt.xlabel("Month", fontsize=12)
-    plt.ylabel("Count", fontsize=12)
-    plt.xticks(range(1,13))
-    plt.savefig("./imgs/month_distribution.png", dpi=300)
-    plt.show()
-
-def plot_day_of_week(df):
-    day_of_week = df["day_of_week"]
-
-    plt.figure(figsize=(8,4))
-    sns.histplot(day_of_week, bins=7, binrange=(0.5,7.5), discrete=True, kde=False, color="gold")
-    plt.title("Day of Week Distribution", fontsize=14)
-    plt.xlabel("Day of Week", fontsize=12)
-    plt.ylabel("Count", fontsize=12)
-    plt.xticks(range(7), ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
-    plt.savefig("./imgs/day_of_week_distribution.png", dpi=300)
-    plt.show()
 
 def visualize_all(df):
     plot_duration(df)
@@ -168,8 +146,6 @@ def visualize_all(df):
     plot_pickup_hour(df)
     plot_pickup_location(df)
     plot_dropoff_location(df)
-    plot_month(df)
-    plot_day_of_week(df)
 
 def feature_importance(df):
     # 处理后数据
@@ -177,26 +153,20 @@ def feature_importance(df):
 
     # 选择特征
     feature_cols = ["vendor_id", "passenger_count", "pickup_longitude", "pickup_latitude",
-                    "dropoff_longitude", "dropoff_latitude", "pickup_hour", "distance_km","month","day_of_week"]
-    
-    # 去除缺失
-    valid_idx = df_new[feature_cols].dropna().index
-    X = df_new.loc[valid_idx, feature_cols]
-    y = df_new.loc[valid_idx, "trip_duration"]
+                    "dropoff_longitude", "dropoff_latitude", "pickup_hour", "distance_km"]
+    X = df_new[feature_cols]
+    y = df_new["trip_duration"]
 
-    # # 只用十万的数据
-    # if len(X) > 100000:
-    #     sample_idx = X.sample(n=100000, random_state=42).index
-    #     X = X.loc[sample_idx]
-    #     y = y.loc[sample_idx]
-    # # -----------------------------------------------------
+    # 去除缺失
+    valid_idx = X.dropna().index
+    X = X.loc[valid_idx]
+    y = y.loc[valid_idx]
 
     # 随机森林
     model = RandomForestRegressor(
-        n_estimators=100,  # 减少树的数量，省内存
-        max_depth=30,     # 限制树的深度，省内存
+        n_estimators=200,
         random_state=42,
-        n_jobs=4 # 改用 4 个线程
+        n_jobs=-1
     )
     model.fit(X, y)
 
