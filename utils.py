@@ -35,6 +35,13 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
     # 将范围调整到 [0, 360)
     return (bearing + 360) % 360
 
+def dummy_manhattan_distance(lat1, lon1, lat2, lon2):
+    # 纬度 1度 ≈ 111km
+    # 经度 1度 在纽约(纬度约40) ≈ 85km
+    a = np.abs(lat2 - lat1) * 111
+    b = np.abs(lon2 - lon1) * 85
+    return a + b
+
 def preprocess_copy(df):
     df_new = df.copy()
     
@@ -47,7 +54,11 @@ def preprocess_copy(df):
     df_new["month"] = df_new["pickup_datetime"].dt.month
     df_new["day_of_week"] = df_new["pickup_datetime"].dt.dayofweek
 
-
+    # 曼哈顿距离    
+    df_new['manhattan_dist'] = dummy_manhattan_distance(
+        df_new['pickup_latitude'], df_new['pickup_longitude'],
+        df_new['dropoff_latitude'], df_new['dropoff_longitude']
+    )
     # 计算行程距离 km
     df_new["distance_km"] = haversine(
         df["pickup_longitude"], df["pickup_latitude"],
